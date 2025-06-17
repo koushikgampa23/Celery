@@ -22,3 +22,6 @@ Contains celery, redis
         CMD ["python", "manage.py", "runserver"]
     2. To build image and run
         docker build -t dcelery .
+### Install celery and redis
+    pip install redis celery
+
