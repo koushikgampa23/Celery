@@ -20,44 +20,57 @@ Contains celery, redis
                 - views.py
                 - tasks.py
         docker-compse.yml
-#### docker-compose.yml
+#### docker-compose.yml (Mind the spacing in yml file)
+    This docker compose file contains 2 workers included
     version: "3.8"
     services:
-    redis:
-        image: redis
-    dcelery:
-        build:
-        context: ./dcelery
-        dockerfile: Dockerfile
-        ports:
-        - 8001:8001
-        command:
-        ["poetry", "run", "python", "manage.py", "runserver", "0.0.0.0:8001"]
-        volumes:
-        - ./dcelery:/app
-        depends_on:
-        - redis
-    # Copy django compose code remove ports and modify command to make celery compose
-    celery:
-        build:
-        context: ./dcelery
-        dockerfile: Dockerfile
-        command: poetry run celery --app=dcelery worker -l INFO # -l stands for logs
-        volumes:
-        - ./dcelery:/app
-        depends_on:
-        - redis
-        - dcelery
+        redis:
+            image: redis
+        dcelery:
+            build:
+                context: ./dcelery
+                dockerfile: Dockerfile
+            ports:
+                - 8001:8001
+            command:
+                ["poetry", "run", "python", "manage.py", "runserver", "0.0.0.0:8001"]
+            volumes:
+                - ./dcelery:/app
+            depends_on:
+                - redis
+        # Copy django compose code remove ports and modify command to make celery compose
+        celery:
+            build:
+                context: ./dcelery
+                dockerfile: Dockerfile
+            command: poetry run celery -A dcelery worker -l INFO -Q queue1 # -Q is for queue #celery --app=dcelery worker -l INFO # -l stands for logs
+            volumes:
+                - ./dcelery:/app
+            depends_on:
+                - redis
+                - dcelery
+        # Optional iam creating worker2
+        celery2:
+            build:
+                context: ./dcelery
+                dockerfile: Dockerfile
+            command: poetry run celery -A dcelery worker -l INFO -Q queue2 # -Q is for queue # -l stands for logs
+            volumes:
+                - ./dcelery:/app
+            depends_on:
+                - redis
+                - dcelery
     volumes:
-    shared_location:
+        shared_location:
+
 #### Dockerfile
     FROM python:slim
     WORKDIR /app
     COPY poetry.lock /app/
     COPY pyproject.toml /app/
+    COPY . .
     # RUN apt-get update && apt-get install -y gcc libpq-dev
     RUN pip install poetry && poetry install
-    COPY . .
     EXPOSE 8001
 #### celery.py
     import os
@@ -68,16 +81,27 @@ Contains celery, redis
     app = Celery("dcelery")
     app.config_from_object("django.conf:settings", namespace="CELERY")  # all the settings that starts with celery are taken
 
-    @app.task  # Registring tasks to celery
-    def add_numbers():
-        return
+    # @app.task  # Registring tasks to celery
+    # def add_numbers():
+    #     return
+    
+    # Code for Routers
+    app.conf.task_routes = {
+        "api.tasks.task1": {"queue": "queue1"},
+        "api.tasks.task2": {"queue": "queue2"},
+    }
 
     app.autodiscover_tasks() # To discover tasks across the project
+
 #### tasks.py
     from celery import shared_task
     @shared_task
-    def shared_task_demo():
+    def shared_task_demo1():
         return
+    @shared_task
+    def shared_task_demo2():
+        return
+
 #### Django Project Setup using poetry
     1. I have [Project] folder
     2. mkdir dcelery
@@ -105,6 +129,12 @@ Contains celery, redis
         from apis.tasks import shared_task_demo
         shared_task_demo.delay() # Connection refuse error if i dont import celery app
         Output: <AsyncResult: 267c6d43-a108-4e7d-b857-173b1a1ceab1>
+
+#### Run this application
+    docker compose up --build
+    if everything goes well we can see this output
+![alt text](docker_compose_output.png)
+
 
 
 
