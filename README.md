@@ -94,4 +94,17 @@ Contains celery, redis
     13. Add in settings.py CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
     14. Add dockerfile next to manage.py file
     15. Add docker-compose.yml same level as main dcelery(for reference see project structure header)
+#### Enter into dcelery container and run shared task(play around with container)
+    docker container ls
+    copy the id of dcelery
+    docker container exec -it <id> bash
+    ls
+    poetry run python manage.py shell
+        from dcelery.celery import app
+         __all__ = ("app",)
+        from apis.tasks import shared_task_demo
+        shared_task_demo.delay() # Connection refuse error if i dont import celery app
+        Output: <AsyncResult: 267c6d43-a108-4e7d-b857-173b1a1ceab1>
+
+
 
