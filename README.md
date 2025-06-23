@@ -3,24 +3,26 @@ Contains celery, redis
 ## To Run Celery Requirements
     1. docker-compose.yml file that contains redis service, celery service, django service
     2. Dockerfile for django application
-    3. celery.py file need to present next to requirements.txt/poetry.toml file
-    4. tasks.py file need to placed in app example: apis/tasks.py next to view.py file
-    5. Add CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+    3. celery.py file need to present next to settings.py file
+    4. In the __init__.py file import celery app
+    5. tasks.py file need to placed in app example: apis/tasks.py next to view.py file
+    6. Add CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
 ### Project structure Example
     Repos/   # This Repos folder can contain many projects 
         dcelery/
             - dcelery
+                - __init__.py
                 - settings.py
                 - urls
+                - celery.py
             - requirements.txt/poetry.toml/manage.py
-            - celery.py
             - Dockerfile
             - README.md (poetry won't work if not present)
             - apis/
                 - views.py
                 - tasks.py
         docker-compse.yml
-#### docker-compose.yml (Mind the spacing in yml file)
+#### 1.docker-compose.yml (Mind the spacing in yml file)
     This docker compose file contains 2 workers included
     version: "3.8"
     services:
@@ -63,7 +65,7 @@ Contains celery, redis
     volumes:
         shared_location:
 
-#### Dockerfile
+#### 2.Dockerfile
     FROM python:slim
     WORKDIR /app
     COPY poetry.lock /app/
@@ -72,7 +74,7 @@ Contains celery, redis
     # RUN apt-get update && apt-get install -y gcc libpq-dev
     RUN pip install poetry && poetry install
     EXPOSE 8001
-#### celery.py
+#### 3.celery.py
     import os
     from celery import Celery
 
@@ -92,8 +94,12 @@ Contains celery, redis
     }
 
     app.autodiscover_tasks() # To discover tasks across the project
+#### 4.__init__.py
+    from .celery import app as celery_app
 
-#### tasks.py
+    __all__ = celery_app
+
+#### 5.tasks.py
     from celery import shared_task
     @shared_task
     def shared_task_demo1():
@@ -134,6 +140,8 @@ Contains celery, redis
     docker compose up --build
     if everything goes well we can see this output
 ![alt text](docker_compose_output.png)
+
+
 
 
 
