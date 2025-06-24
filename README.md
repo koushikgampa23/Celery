@@ -141,6 +141,60 @@ Contains celery, redis
     if everything goes well we can see this output
 ![alt text](docker_compose_output.png)
 
+### Celery Task Prioritization
+    Why do we need Task Prioritization?
+        Ensure Critical Tasks are executed first
+        Optimize resource utilization
+        Meet SLAs and deadlines
+        Handle high-priority or time-sensitive requests efficiently
+    Setting Task Prioritization
+        0 and 9(0 being lowest, 9 being the highest)
+        Default specified in the task decorator or configuration
+    Configuring worker queues:
+        Define multiple queues representing different priorities
+        Associate each queue with specific priority level
+        Celery worker consumes tasks from queues based on priority
+### Task Grouping
+    Task Grouping allows us to execute multiple tasks in parallel
+    It helps us manage dependencies among tasks and ensure that certain tasks are executed only after other.
+    So result aggregation, process tracking, error handling, task composition
+    So grouping tasks provides us a way to build complex workflow by combining multiple smaller tasks
+#### Task Grouping Handson
+    from celery import group
+    task_group = group(
+            shared_task_demo1.s(), #s() stands for signature
+            shared_task_demo2.s(),
+            shared_task_demo3.s(),
+            shared_task_demo4.s(),
+        )
+    task_group.apply_async()
+    This four tasks will be executed parallelly
+    demo1 and demo3 will be executed first since there time.sleep is 10 seconds
+    later demo2, demo4 will be executed since it is 20 seconds
+### Task Chaining
+    Gives us the ability to create a sequence of tasks
+    This potentially provides us the ability to use output from one task for the input for the next task in the chain.
+    So we can dependencies and create order of execution
+### Task Grouping vs Task Chaining
+    Task chaining is a sequential exection of tasks, where as output of one task is the input of other.
+    Task grouping involves executing mulitple tasks parallel without any specific dependencies or order between them 
+#### Task Chaining Handson
+    from celery import chain
+    task_group = chain(
+            shared_task_demo1.s(),
+            shared_task_demo3.s(),
+            shared_task_demo2.si(),
+            shared_task_demo4.si(),
+        )
+    Change shared_task_demo3
+    @shared_task
+    def shared_task_demo3(previous_value):
+        time.sleep(10)
+        return previous_value + 10
+    task_group.apply_async()
+    si() ignores previous result
+    s() previous value is needed in chaining 
+
 
 
 
