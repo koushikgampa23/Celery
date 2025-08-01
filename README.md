@@ -193,7 +193,94 @@ Contains celery, redis
         return previous_value + 10
     task_group.apply_async()
     si() ignores previous result
-    s() previous value is needed in chaining 
+    s() previous value is needed in chaining
+### Task Rate Limit
+    We have done setup for multiple queues and each queue is assigned a worker 
+    Queue1 can have potentally bigger cpu mainly used for calculations
+    Queue4 which had a lower priority
+    Where will this task rate limit fits
+    This is gone prevent overwhelming of the system
+    We can enforce a rate restriction on task execution
+    The queue1 that has higher priority can have higher rate limiting
+    The queue4 that has lower priority can have lower rate limiting
+    Pending Implementation
+## Configuring Task Prioritization using Rabbit MQ
+    Rabbit MQ Stores tasks similar to Redis
+    Celery will always selects tasks based on highest priority to process first
+### Install RabbitMQ
+    pip install pika or poetry add pika, add in settings.py file installed apps
+### Defination of configuration and difference
+    worker_concurrency: 
+        Number of worker that can run concurrently. and each worker executes one task at a time
+        Higher concurrency means more tasks can be processed in parallel, but it can also lead to higher memory usage and contention for resources.
+    worker_prefetch_multiplier: 
+        Number of tasks that each worker can prefetch at a time.
+    Difference between worker_concurrency and worker_prefetch_multiplier:
+        Consider if you have 6 tasks?
+            set worker_concurrency to 2 and worker_prefetch_multiplier to 3, then we get 2 workers, each worker will prefetch 3 tasks, so total of 6 tasks are performed in parallel. the worker 1 can handle 3 tasks in fifo.
+### File Modifications
+    1. Settings.py
+        Replace redis broker url with rabbitmq broker url
+        CELERY_BROKER_URL = os.environ.get(
+            "CELERY_BROKER", "amqp://guest:guest@rabbitmq:5672//"
+        )
+    2. In the celery.py file add this
+        # RabbitMQ message priority
+        app.conf.task_queues = [
+            Queue(
+                "tasks",
+                Exchange("tasks"),
+                routing_key="tasks",
+                queue_arguments={"x-max-priority": 10},
+            ),
+        ]
+
+        app.conf.task_default_queue = "tasks"
+        app.conf.task_default_exchange = "tasks"
+        app.conf.task_default_exchange_type = "direct"
+        app.conf.task_default_routing_key = "tasks"
+
+        app.conf.task_acks_late = (
+            True  # to ensure that the task is acknowledged only after it has been executed
+        )
+        app.conf.task_default_priority = 5
+        app.conf.worker_prefetch_multiplier = (
+            1  # to ensure that only one task is prefetched at a time
+        )
+        app.conf.worker_concurrency = 2  # number of worker processes to run
+    3. In the shared_tasks
+        @app.task(queue="tasks")
+        def t1():
+            time.sleep(20)
+            return
+        @app.task(queue="tasks")
+        def t2():
+            time.sleep(20)
+            return
+        @app.task(queue="tasks")
+        def t3():
+            time.sleep(20)
+            return
+    4. in the dummy api of test add this 
+        t2.apply_async(priority=5)
+        t1.apply_async(priority=1)
+        t3.apply_async(priority=10)
+    5. Docker compose file run celery like this
+        poetry run celery -A dcelery worker --loglevel=info -Q tasks
+### Different ways to run Celery
+    poetry run celery -A dcelery -l Info (--queues are optional)
+
+    poetry run celery -A dcelery -l Info -Q tasks
+    poetry run celery --app=dcelery --loglevel=info --queues=tasks (both commands are equal)
+
+    poetry run celery -A dcelery -l Info -Q celery,celery1,celery2,celery3 #Use only if broker_transport_options is enabled and created celery priorites
+
+
+
+
+
+
+
 
 
 
