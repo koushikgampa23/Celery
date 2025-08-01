@@ -274,7 +274,14 @@ Contains celery, redis
     poetry run celery --app=dcelery --loglevel=info --queues=tasks (both commands are equal)
 
     poetry run celery -A dcelery -l Info -Q celery,celery1,celery2,celery3 #Use only if broker_transport_options is enabled and created celery priorites
-
+### Passing Arguments to celery task
+    @app.task(queue="tasks")
+    def t1(a: int, b: int, message="None"):
+        result = a + b
+        if message:
+            result = f"{a} + {b} = {a + b}, message: {message}"
+        return result
+    t1.apply_async(priority=6, args=[1, 2], kwargs={"message": "addition performed"})
 
 
 
