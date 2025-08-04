@@ -282,6 +282,62 @@ Contains celery, redis
             result = f"{a} + {b} = {a + b}, message: {message}"
         return result
     t1.apply_async(priority=6, args=[1, 2], kwargs={"message": "addition performed"})
+#### Async Result
+    .ready() - returns True if the task is completed else False
+    .get() - blocks main thread and results result can raise exception needs to be handled
+    .result() - returns value if the task is successful else None and dont raise excpetion if any exeption happens it stores the exception object as well
+
+    if iam using apply_async and get result then the best way is to use get method since that blocks main thread and gives result
+
+    if i use another api call to get result the best way is to use second method .result method
+
+    Method1:
+
+    result = t1.apply_async(args=[1, 2], kwargs={"message": "--------->"})
+
+    if result.ready():
+        logger.info("Tasks Completed Successfully")
+    else:
+        logger.info("Task still in progress")
+
+    try:
+        logger.info(f"Task Result: {result.get()}")
+    except Exception as e:
+        logger.error(f"Task Failed: {e}")
+
+    t2.apply_async()
+
+    Output:
+    Task still in progress (printed only once since we are not using any while loop to continously monitor)
+    Task Result: 1+2=3(takes some time to print this since it blocks main thread until the task is completed)
+
+    Method2(this method can be used mainly in polling):
+    result = t1.apply_async(args=[1, 2], kwargs={"message": "--------->"})
+
+    while True:
+        if result.ready():
+            logger.info("Tasks Completed Successfully")
+        else:
+            logger.info("Task still in progress")
+
+        if result.successful():
+            logger.info(f"Task Result: {result.result}")
+            break
+        if result.failed():
+            logger.error("Task Failed")
+            break
+    Output:
+    Task still in progress
+    Task still in progress
+    ...
+    Task Result: 1+2=3
+### Celery Flower
+    Monitoring
+    Management
+    Visualization
+    
+
+
 
 
 
