@@ -381,6 +381,29 @@ Contains celery, redis
                             task_modules.append(f"api.celery_tasks.{module_name}.{name}")
 
         app.autodiscover_tasks(task_modules)  # Discover tasks in the specified modules
+### Handling errors in celery tasks using Custom Task Classes
+    open any tasks.py file and write the code
+    Create a custom class
+        class CustomTask(Task):
+            def on_failure(self, exc, task_id, args, kwargs, einfo):
+                if isinstance(exc, ConnectionError):
+                    logger.info("Admin Notified")
+
+
+        app.Task = CustomTask
+
+
+        @app.task(queue="tasks")
+        def t1(a: int, b: int, message="None"):
+            try:
+                raise ConnectionError("Connection Error")
+            except ConnectionError as e:
+                logger.error(f"Error in task t1: {e}")
+                raise e
+    
+    when ever the ConnectionError Raised then it will print Admin Notified in the logger
+
+
 
     
 
