@@ -332,9 +332,58 @@ Contains celery, redis
     ...
     Task Result: 1+2=3
 ### Celery Flower
-    Monitoring
+    Monitoring - execution of tasks in realtime and worker performance as well
     Management
     Visualization
+    Setup:
+        Add this service in docker compose file
+        flower:
+          image: mher/flower
+        container_name: flower
+        ports:
+          - 5555:5555
+        environment:
+          - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    After docker build
+    acess this tool in the localhost:5555
+### Common Types of Exceptions and errors in celery tasks
+    Network Errors:
+        Connection Timeouts
+        DNS resolution Failures
+        Network connectivity issues
+    Database Connection issues:
+        Database server unavalibility
+        Authentication Errors
+        Connection pool exhaustion
+### Dynamic Task Discovery in Celery: Auto Discovering tasks in Directory
+    Instead of celery auto discovery tasks from the task.py file i need to implement discovery tasks in celery_tasks.ex-name.py
+    Code to autodiscovery in custom folder and custom task name
+        base_dir = os.getcwd()  # Get the current working directory
+        tasks_folder = os.path.join(base_dir, "api", "celery_tasks")  # Path to the tasks folder
+
+        # Checks if the tasks folder exists and is a directory
+        if os.path.exists(tasks_folder) and os.path.isdir(tasks_folder):
+            task_modules = []
+            for filename in os.listdir(
+                tasks_folder
+            ):  # Iterate through files in the tasks folder
+                if filename.startswith("ex-") and filename.endswith(".py"):
+                    module_name = filename[:-3]
+                    module_path = f"api.celery_tasks.{module_name}"
+
+                    module = __import__(
+                        module_path, fromlist=["*"]
+                    )  # Import the module dynamically
+
+                    for name in dir(module):
+                        obj = getattr(module, name)
+                        if callable(obj):
+                            task_modules.append(f"api.celery_tasks.{module_name}.{name}")
+
+        app.autodiscover_tasks(task_modules)  # Discover tasks in the specified modules
+
+    
+
     
 
 
