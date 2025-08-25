@@ -401,7 +401,8 @@ Contains celery, redis
                 logger.error(f"Error in task t1: {e}")
                 raise e
     
-    when ever the ConnectionError Raised then it will print Admin Notified in the logger
+    when ever the ConnectionError Raised then it will print Admin Notified in the logger there no need of try/except as well.
+    
 
 
 
